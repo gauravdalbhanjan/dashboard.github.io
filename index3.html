@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinPulse - Allocations Product Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        @font-face { font-family: 'Amazon Ember'; src: local('Amazon Ember'); font-weight: 400; }
+        @font-face { font-family: 'Amazon Ember'; src: local('Amazon Ember Medium'); font-weight: 500; }
+        @font-face { font-family: 'Amazon Ember'; src: local('Amazon Ember Bold'); font-weight: 700; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Amazon Ember', 'Roboto', -apple-system, sans-serif; background: #f5f5f5; display: flex; height: 100vh; overflow: hidden; }
+
+        .app-bar { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: #1a2332; display: flex; align-items: center; padding: 0 16px; z-index: 1200; color: #fff; }
+        .app-bar .app-icon { font-size: 20px; margin-right: 12px; cursor: pointer; }
+        .app-bar .app-title { font-size: 16px; font-weight: 500; }
+        .app-bar .spacer { flex: 1; }
+        .app-bar .toolbar-icons { display: flex; gap: 8px; }
+        .app-bar .toolbar-icons .material-icons { font-size: 22px; cursor: pointer; opacity: 0.87; }
+
+        .sidebar { width: 180px; background: #1e2a3a; color: #fff; padding-top: 48px; height: 100vh; position: fixed; left: 0; top: 0; overflow-y: auto; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header span { font-weight: 500; font-size: 14px; }
+        .sidebar-header .material-icons { font-size: 18px; cursor: pointer; opacity: 0.7; }
+        .sidebar-nav { flex: 1; padding: 8px 0; }
+        .nav-item { display: flex; align-items: center; padding: 10px 16px; cursor: pointer; font-size: 13px; color: rgba(255,255,255,0.7); transition: background 0.2s; }
+        .nav-item:hover { background: rgba(255,255,255,0.08); }
+        .nav-item.active { background: rgba(255,255,255,0.12); color: #fff; }
+        .nav-item .material-icons { font-size: 20px; margin-right: 12px; }
+        .nav-section-header { display: flex; align-items: center; padding: 10px 16px; cursor: pointer; font-size: 13px; color: rgba(255,255,255,0.9); }
+        .nav-section-header .material-icons { font-size: 20px; margin-right: 12px; }
+        .nav-section-header .expand { margin-left: auto; font-size: 18px; }
+        .nav-sub-item { padding: 8px 16px 8px 48px; font-size: 13px; color: rgba(255,255,255,0.6); cursor: pointer; transition: background 0.2s; }
+        .nav-sub-item:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); }
+        .nav-sub-item.active { color: #fff; background: rgba(255,255,255,0.12); }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        .main-content { margin-left: 180px; margin-top: 48px; padding: 24px; flex: 1; overflow-y: auto; height: calc(100vh - 48px); }
+
+        .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
+        .page-header h1 { font-size: 20px; font-weight: 600; color: #1a2332; }
+        .page-header .subtitle { font-size: 12px; color: #666; margin-top: 2px; }
+        .last-refresh { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; font-size: 11px; }
+        .last-refresh .label { font-weight: 600; color: #1a2332; font-size: 12px; }
+        .last-refresh .time { color: #888; }
+        .last-refresh .refresh-btn { width: 28px; height: 28px; border: 1px solid #90caf9; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fff; }
+        .last-refresh .refresh-btn .material-icons { font-size: 16px; color: #1976d2; }
+
+        .filters-row { display: flex; align-items: flex-end; margin: 16px 0; padding: 10px 16px; background: #fff; border-radius: 6px; border: 1px solid #e0e0e0; gap: 16px; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; color: #666; }
+        .filter-dropdown { border: 1px solid #e0e0e0; border-radius: 6px; padding: 6px 12px; font-size: 13px; font-family: inherit; min-width: 120px; background: #fff; }
+        .filter-divider { width: 1px; height: 36px; background: #e0e0e0; }
+        .filters-actions { display: flex; gap: 8px; margin-left: auto; }
+        .btn-reset { padding: 8px 16px; border: none; background: transparent; color: #1976d2; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 6px; }
+        .btn-apply { padding: 8px 16px; border: none; background: #1565c0; color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 6px; }
+
+        .section-title { font-size: 15px; font-weight: 600; color: #1a2332; margin: 20px 0 4px; }
+        .section-subtitle { font-size: 12px; color: #666; margin-bottom: 12px; }
+
+        /* Score Dial */
+        .score-section { margin-bottom: 24px; }
+        .score-card { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .score-dial { width: 160px; height: 160px; position: relative; }
+        .score-dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .score-dial .score-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+        .score-dial .score-value { font-size: 36px; font-weight: 700; color: #1a2332; }
+        .score-dial .score-label { font-size: 11px; color: #666; }
+        .score-dial .score-status { font-size: 12px; font-weight: 600; margin-top: 2px; }
+        .score-change { margin-top: 8px; font-size: 12px; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
+        .score-change.down { background: #ffebee; color: #f44336; }
+        .score-change.up { background: #e8f5e9; color: #4caf50; }
+
+        /* Metric Cards */
+        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .metric-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; }
+        .metric-card .mc-label { font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+        .metric-card .mc-label .material-icons { font-size: 14px; }
+        .metric-card .mc-value { font-size: 28px; font-weight: 700; color: #1a2332; }
+        .metric-card .mc-change { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 500; display: inline-block; margin-top: 6px; }
+        .mc-change.up { background: #e8f5e9; color: #4caf50; }
+        .mc-change.down { background: #ffebee; color: #f44336; }
+        .mc-subtext { font-size: 11px; color: #888; margin-top: 4px; }
+
+        /* Chart Cards */
+        .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+        .chart-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; }
+        .chart-card .cc-header { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #666; margin-bottom: 4px; }
+        .chart-card .cc-header .material-icons { font-size: 14px; }
+        .chart-card .cc-value { font-size: 24px; font-weight: 700; color: #1a2332; }
+        .chart-card .cc-suffix { font-size: 12px; color: #888; font-weight: 400; }
+        .chart-card .cc-meta { font-size: 11px; color: #888; margin-bottom: 12px; }
+        .chart-canvas { width: 100%; height: 160px; position: relative; }
+        .chart-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 11px; color: #666; }
+        .chart-legend span { display: flex; align-items: center; gap: 4px; }
+        .chart-legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* Change Log */
+        .changelog-section { margin-top: 24px; }
+        .changelog-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; }
+        .changelog-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .changelog-card .cl-subtitle { font-size: 12px; color: #666; margin-bottom: 12px; }
+        .changelog-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .changelog-table th { text-align: left; padding: 8px 12px; background: #f9f9f9; border-bottom: 1px solid #e0e0e0; color: #666; font-weight: 500; }
+        .changelog-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; color: #333; }
+        .changelog-table tr:hover { background: #f5f9ff; }
+
+        /* Theme Toggle */
+        .theme-toggle { cursor: pointer; }
+
+        /* ===== DARK MODE ===== */
+        body.dark-mode { background: #0d1b2a; }
+        body.dark-mode .main-content { background: #0d1b2a; }
+        body.dark-mode .sidebar { background: #0f1c2e; }
+
+        body.dark-mode .page-header h1 {
+            background: linear-gradient(90deg, #4fc3f7 0%, #2196f3 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        body.dark-mode .page-header .subtitle { color: rgba(255,255,255,0.6); }
+
+        body.dark-mode .last-refresh { background: #132238; border-color: #1e3a5f; }
+        body.dark-mode .last-refresh .label { color: rgba(255,255,255,0.9); }
+        body.dark-mode .last-refresh .time { color: rgba(255,255,255,0.5); }
+        body.dark-mode .last-refresh .refresh-btn { background: #132238; border-color: #1e3a5f; }
+
+        body.dark-mode .filters-row { background: #0d1b2a; border-color: #1e3a5f; }
+        body.dark-mode .filter-group label { color: #4fc3f7; }
+        body.dark-mode .filter-dropdown { background: #132238; border-color: #1e3a5f; color: #fff; }
+        body.dark-mode .filter-divider { background: #1e3a5f; }
+        body.dark-mode .btn-reset { color: #64b5f6; }
+
+        body.dark-mode .section-title { color: #fff; }
+        body.dark-mode .section-subtitle { color: rgba(255,255,255,0.5); }
+
+        body.dark-mode .score-dial .score-value { color: #fff; }
+        body.dark-mode .score-dial .score-label { color: rgba(255,255,255,0.6); }
+        body.dark-mode .score-change.down { background: rgba(244,67,54,0.15); color: #ef5350; }
+        body.dark-mode .score-change.up { background: rgba(76,175,80,0.15); color: #66bb6a; }
+
+        body.dark-mode .metric-card {
+            background: #0a1628; border-color: #1e3a5f;
+        }
+        body.dark-mode .metric-card .mc-label { color: rgba(255,255,255,0.6); }
+        body.dark-mode .metric-card .mc-value { color: #fff; }
+        body.dark-mode .mc-change.up { background: rgba(76,175,80,0.15); color: #66bb6a; }
+        body.dark-mode .mc-change.down { background: rgba(244,67,54,0.15); color: #ef5350; }
+
+        body.dark-mode .chart-card {
+            background: #0a1628; border-color: #1e3a5f;
+        }
+        body.dark-mode .chart-card .cc-header { color: rgba(255,255,255,0.6); }
+        body.dark-mode .chart-card .cc-value { color: #fff; }
+        body.dark-mode .chart-card .cc-meta { color: rgba(255,255,255,0.4); }
+        body.dark-mode .chart-legend { color: rgba(255,255,255,0.5); }
+
+        body.dark-mode .changelog-card {
+            background: #0a1628; border-color: #1e3a5f;
+        }
+        body.dark-mode .changelog-card h3 { color: #fff; }
+        body.dark-mode .changelog-card .cl-subtitle { color: rgba(255,255,255,0.5); }
+        body.dark-mode .changelog-table th { background: #132238; color: rgba(255,255,255,0.6); border-color: #1e3a5f; }
+        body.dark-mode .changelog-table td { color: rgba(255,255,255,0.7); border-color: #1e3a5f; }
+        body.dark-mode .changelog-table tr:hover { background: rgba(25,118,194,0.08); }
+    </style>
+</head>
+<body>
+    <div class="app-bar">
+        <span class="material-icons app-icon">apps</span>
+        <span class="app-title">FinPulse</span>
+        <div class="spacer"></div>
+        <div class="toolbar-icons">
+            <span class="material-icons">dashboard</span>
+            <span class="material-icons theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">dark_mode</span>
+            <span class="material-icons">help_outline</span>
+            <span class="material-icons">account_circle</span>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span>FinPulse</span>
+            <span class="material-icons">chevron_left</span>
+        </div>
+        <div class="sidebar-nav">
+            <div class="nav-item" onclick="window.location.href='finpulse-dashboard.html'" style="cursor:pointer;">
+                <span class="material-icons">dashboard</span> Portfolio
+            </div>
+            <div class="nav-section-header">
+                <span class="material-icons">favorite_border</span> Favorites
+                <span class="material-icons expand">expand_less</span>
+            </div>
+            <div class="nav-sub-item active">Allocation</div>
+            <div class="nav-sub-item">Constellation</div>
+            <div class="nav-sub-item">FRA1</div>
+
+            <div class="nav-section-header">
+                <span class="material-icons">apps</span> All Products
+                <span class="material-icons expand">expand_less</span>
+            </div>
+            <div class="nav-sub-item">Constellation</div>
+            <div class="nav-sub-item">Allocation</div>
+            <div class="nav-sub-item">Allocation Tracking</div>
+            <div class="nav-sub-item">FRA1</div>
+            <div class="nav-sub-item">FinTask</div>
+            <div class="nav-sub-item">Calendar</div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="nav-item">
+                <span class="material-icons">add_box</span> Create Request
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="page-header">
+            <div>
+                <h1>Allocations - Product Success Dashboard</h1>
+                <div class="subtitle">Product Manager View • Daily/Weekly View</div>
+            </div>
+            <div class="last-refresh">
+                <div>
+                    <div class="label">Last Refresh</div>
+                    <div class="time" id="refreshTime"></div>
+                </div>
+                <div class="refresh-btn"><span class="material-icons">sync</span></div>
+            </div>
+        </div>
+
+        <div class="filters-row">
+            <div class="filter-group">
+                <label>Period</label>
+                <select class="filter-dropdown">
+                    <option>Daily</option><option>Weekly</option><option>Quarterly</option>
+                </select>
+            </div>
+            <div class="filter-divider"></div>
+            <div class="filter-group">
+                <label>Date Range</label>
+                <select class="filter-dropdown">
+                    <option>Today</option><option>Last 7 Days</option><option>Last 30 Days</option>
+                </select>
+            </div>
+            <div class="filters-actions">
+                <button class="btn-reset">Reset</button>
+                <button class="btn-apply">Apply</button>
+            </div>
+        </div>
+
+        <!-- Product Success Score -->
+        <div class="section-title" style="font-size:13px; margin-bottom:8px;">Product Success Score <span class="material-icons" style="font-size:14px; color:#999;">info_outline</span></div>
+        <div class="score-section">
+            <div class="score-card">
+                <div class="score-dial">
+                    <svg viewBox="0 0 160 160">
+                        <circle cx="80" cy="80" r="65" fill="none" stroke="#e0e0e0" stroke-width="14" id="scoreArcBg"/>
+                        <circle cx="80" cy="80" r="65" fill="none" stroke="#f44336" stroke-width="14" id="scoreArc"
+                            stroke-dasharray="0 408.4" stroke-linecap="round"/>
+                    </svg>
+                    <div class="score-center">
+                        <div class="score-value" id="scoreValue">23.2</div>
+                        <div class="score-label">Score</div>
+                        <div class="score-status" id="scoreStatus" style="color: #f44336;">At Risk</div>
+                    </div>
+                </div>
+                <div class="score-change down" id="scoreChange">-16.2% vs. previous BD</div>
+            </div>
+        </div>
+
+        <!-- Product Adoption & Engagement -->
+        <div class="section-title">Product Adoption &amp; Engagement</div>
+        <div class="section-subtitle">Core metrics tracking user adoption, engagement, and platform utilization.</div>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="mc-label">Active Users <span class="material-icons">info_outline</span></div>
+                <div class="mc-value" id="activeUsers">847</div>
+                <div class="mc-change down" id="activeUsersChange">-63.8% vs. previous BD</div>
+            </div>
+            <div class="metric-card">
+                <div class="mc-label">Total Unique Users <span class="material-icons">info_outline</span></div>
+                <div class="mc-value" id="uniqueUsers">1,823</div>
+                <div class="mc-change down" id="uniqueUsersChange">-5.8% vs. previous BD</div>
+            </div>
+            <div class="metric-card">
+                <div class="mc-label">Total Hits <span class="material-icons">info_outline</span></div>
+                <div class="mc-value" id="totalHits">12,340</div>
+                <div class="mc-change up" id="totalHitsChange">+34.8% vs. previous BD</div>
+            </div>
+        </div>
+
+        <!-- Product Efficiency Metrics -->
+        <div class="section-title">Product Efficiency Metrics</div>
+        <div class="section-subtitle">Performance metrics tracking operational efficiency and quality.</div>
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="cc-header">Successful Run Rate <span class="material-icons">info_outline</span></div>
+                <div class="cc-value" id="runRateValue">76.5%</div>
+                <div class="cc-meta">Target: 90.0 &nbsp; Previous: 76.2%</div>
+                <canvas id="runRateChart" class="chart-canvas"></canvas>
+                <div class="chart-legend">
+                    <span><span class="dot" style="background:#1976d2;"></span> Actual Rate</span>
+                    <span><span class="dot" style="background:#4caf50;"></span> Target Rate</span>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="cc-header">Allocation Runs <span class="material-icons">info_outline</span></div>
+                <div class="cc-value" id="allocRunsValue">234</div>
+                <div class="cc-meta">Target: 350 &nbsp; Previous: 250</div>
+                <canvas id="allocRunsChart" class="chart-canvas"></canvas>
+                <div class="chart-legend">
+                    <span><span class="dot" style="background:#1976d2;"></span> Actual Runs</span>
+                    <span><span class="dot" style="background:#4caf50;"></span> Target Runs</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Change Log -->
+        <div class="changelog-section">
+            <div class="changelog-card">
+                <h3>Dashboard Change Log</h3>
+                <div class="cl-subtitle">Complete history of dashboard configuration changes, metric additions, and system updates.</div>
+                <table class="changelog-table">
+                    <thead>
+                        <tr><th>Date</th><th>Functionality</th><th>Action</th><th>User</th></tr>
+                    </thead>
+                    <tbody id="changelogBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            if (isDark) {
+                themeToggle.textContent = 'light_mode';
+                themeToggle.title = 'Switch to Light Mode';
+                document.getElementById('scoreArcBg').setAttribute('stroke', '#1e3a5f');
+            } else {
+                themeToggle.textContent = 'dark_mode';
+                themeToggle.title = 'Switch to Dark Mode';
+                document.getElementById('scoreArcBg').setAttribute('stroke', '#e0e0e0');
+            }
+        });
+
+        // Live Time
+        function updateTime() {
+            const now = new Date();
+            const opts = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            document.getElementById('refreshTime').textContent = now.toLocaleDateString('en-US', opts) + ', ' + now.toLocaleTimeString('en-US');
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Live Data Model
+        const data = {
+            score: 23.2,
+            activeUsers: 847,
+            uniqueUsers: 1823,
+            totalHits: 12340,
+            runRate: 76.5,
+            allocRuns: 234,
+            runRateHistory: [],
+            allocRunsHistory: []
+        };
+
+        // Initialize chart history
+        for (let i = 0; i < 20; i++) {
+            data.runRateHistory.push(70 + Math.random() * 20);
+            data.allocRunsHistory.push(200 + Math.random() * 100);
+        }
+
+        function fluctuate(val, range, min, max) {
+            val += (Math.random() - 0.5) * 2 * range;
+            return Math.max(min, Math.min(max, val));
+        }
+
+        function updateMetrics() {
+            // Update values
+            data.score = fluctuate(data.score, 2, 5, 95);
+            data.activeUsers = fluctuate(data.activeUsers, 30, 200, 2000);
+            data.uniqueUsers = fluctuate(data.uniqueUsers, 50, 500, 5000);
+            data.totalHits = fluctuate(data.totalHits, 300, 5000, 30000);
+            data.runRate = fluctuate(data.runRate, 2, 30, 99);
+            data.allocRuns = fluctuate(data.allocRuns, 10, 50, 500);
+
+            // Update score dial
+            const scoreEl = document.getElementById('scoreValue');
+            scoreEl.textContent = data.score.toFixed(1);
+            const circumference = 2 * Math.PI * 65;
+            const arc = (data.score / 100) * circumference;
+            const scoreArc = document.getElementById('scoreArc');
+            scoreArc.setAttribute('stroke-dasharray', arc + ' ' + (circumference - arc));
+
+            // Score color
+            let scoreColor, scoreText;
+            if (data.score >= 70) { scoreColor = '#4caf50'; scoreText = 'Good'; }
+            else if (data.score >= 50) { scoreColor = '#ffc107'; scoreText = 'On Watch'; }
+            else { scoreColor = '#f44336'; scoreText = 'At Risk'; }
+            scoreArc.setAttribute('stroke', scoreColor);
+            document.getElementById('scoreStatus').style.color = scoreColor;
+            document.getElementById('scoreStatus').textContent = scoreText;
+
+            // Score change
+            const scoreChangeVal = ((data.score - 27.7) / 27.7 * 100).toFixed(1);
+            const scoreChangeEl = document.getElementById('scoreChange');
+            scoreChangeEl.textContent = (scoreChangeVal >= 0 ? '+' : '') + scoreChangeVal + '% vs. previous BD';
+            scoreChangeEl.className = 'score-change ' + (scoreChangeVal >= 0 ? 'up' : 'down');
+
+            // Active Users
+            document.getElementById('activeUsers').textContent = Math.round(data.activeUsers).toLocaleString();
+            updateChange('activeUsersChange', data.activeUsers, 2340);
+
+            // Unique Users
+            document.getElementById('uniqueUsers').textContent = Math.round(data.uniqueUsers).toLocaleString();
+            updateChange('uniqueUsersChange', data.uniqueUsers, 1935);
+
+            // Total Hits
+            document.getElementById('totalHits').textContent = Math.round(data.totalHits).toLocaleString();
+            updateChange('totalHitsChange', data.totalHits, 9150);
+
+            // Run Rate
+            document.getElementById('runRateValue').textContent = data.runRate.toFixed(1) + '%';
+            data.runRateHistory.push(data.runRate);
+            if (data.runRateHistory.length > 20) data.runRateHistory.shift();
+            drawChart('runRateChart', data.runRateHistory, 90, 0, 100);
+
+            // Allocation Runs
+            document.getElementById('allocRunsValue').textContent = Math.round(data.allocRuns);
+            data.allocRunsHistory.push(data.allocRuns);
+            if (data.allocRunsHistory.length > 20) data.allocRunsHistory.shift();
+            drawChart('allocRunsChart', data.allocRunsHistory, 350, 0, 500);
+        }
+
+        function updateChange(id, current, previous) {
+            const el = document.getElementById(id);
+            const pct = ((current - previous) / previous * 100).toFixed(1);
+            el.textContent = (pct >= 0 ? '+' : '') + pct + '% vs. previous BD';
+            el.className = 'mc-change ' + (pct >= 0 ? 'up' : 'down');
+        }
+
+        function drawChart(canvasId, dataArr, target, min, max) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            canvas.width = w * 2;
+            canvas.height = h * 2;
+            ctx.scale(2, 2);
+            ctx.clearRect(0, 0, w, h);
+
+            const isDark = document.body.classList.contains('dark-mode');
+            const gridColor = isDark ? '#1e3a5f' : '#f0f0f0';
+            const axisColor = isDark ? '#2a4a6b' : '#ccc';
+            const textColor = isDark ? 'rgba(255,255,255,0.5)' : '#888';
+            const labelColor = isDark ? 'rgba(255,255,255,0.6)' : '#666';
+
+            const paddingLeft = 40;
+            const paddingRight = 10;
+            const paddingTop = 10;
+            const paddingBottom = 40;
+            const chartW = w - paddingLeft - paddingRight;
+            const chartH = h - paddingTop - paddingBottom;
+
+            // Y-axis labels
+            ctx.fillStyle = textColor;
+            ctx.font = '10px Amazon Ember, Roboto, sans-serif';
+            ctx.textAlign = 'right';
+            const ySteps = 4;
+            for (let i = 0; i <= ySteps; i++) {
+                const val = min + ((max - min) / ySteps) * (ySteps - i);
+                const y = paddingTop + (chartH / ySteps) * i;
+                ctx.fillText(Math.round(val) + (canvasId === 'runRateChart' ? '%' : ''), paddingLeft - 6, y + 3);
+
+                // Grid line
+                ctx.strokeStyle = gridColor;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, y);
+                ctx.lineTo(w - paddingRight, y);
+                ctx.stroke();
+            }
+
+            // X-axis labels (months)
+            ctx.textAlign = 'center';
+            ctx.fillStyle = textColor;
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const now = new Date();
+            const xLabels = [];
+            for (let i = 0; i < dataArr.length; i++) {
+                const d = new Date(now.getTime() - (dataArr.length - 1 - i) * 86400000);
+                xLabels.push(months[d.getMonth()] + ' ' + d.getDate());
+            }
+            const labelInterval = Math.max(1, Math.floor(dataArr.length / 5));
+            for (let i = 0; i < dataArr.length; i += labelInterval) {
+                const x = paddingLeft + (chartW / (dataArr.length - 1)) * i;
+                ctx.fillText(xLabels[i], x, h - paddingBottom + 16);
+
+                // Vertical grid line
+                ctx.strokeStyle = gridColor;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(x, paddingTop);
+                ctx.lineTo(x, paddingTop + chartH);
+                ctx.stroke();
+            }
+
+            // Axis labels
+            ctx.fillStyle = labelColor;
+            ctx.font = '10px Amazon Ember, Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Date', w / 2, h - 4);
+
+            // Y-axis title (rotated)
+            ctx.save();
+            ctx.translate(10, paddingTop + chartH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.fillText(canvasId === 'runRateChart' ? 'Percentage' : 'Runs', 0, 0);
+            ctx.restore();
+
+            // Axes lines
+            ctx.strokeStyle = axisColor;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(paddingLeft, paddingTop);
+            ctx.lineTo(paddingLeft, paddingTop + chartH);
+            ctx.lineTo(w - paddingRight, paddingTop + chartH);
+            ctx.stroke();
+
+            // Target line
+            const targetY = paddingTop + chartH - ((target - min) / (max - min)) * chartH;
+            ctx.strokeStyle = '#4caf50';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(paddingLeft, targetY);
+            ctx.lineTo(w - paddingRight, targetY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Data line
+            ctx.strokeStyle = '#1976d2';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < dataArr.length; i++) {
+                const x = paddingLeft + (chartW / (dataArr.length - 1)) * i;
+                const y = paddingTop + chartH - ((dataArr[i] - min) / (max - min)) * chartH;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Fill under line
+            const lastX = paddingLeft + chartW;
+            const lastY = paddingTop + chartH - ((dataArr[dataArr.length - 1] - min) / (max - min)) * chartH;
+            ctx.lineTo(lastX, paddingTop + chartH);
+            ctx.lineTo(paddingLeft, paddingTop + chartH);
+            ctx.closePath();
+            ctx.fillStyle = isDark ? 'rgba(25, 118, 194, 0.1)' : 'rgba(25, 118, 194, 0.05)';
+            ctx.fill();
+        }
+
+        // Change Log Data
+        const changelogData = [
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Critical Metric', action: 'Added Successful Run Rate', user: 'sriramm2' },
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Metric Configuration', action: 'Added Daily Active Users metric', user: 'sriramm2' },
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Target Update', action: 'Updated target threshold', user: 'sriramm2' },
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Dashboard Configuration', action: 'Modified chart time range', user: 'sriramm2' },
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Target Adjustment', action: 'Updated baseline target', user: 'sriramm2' },
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Alert Configuration', action: 'Created alert rule', user: 'sriramm2' },
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Metric Removal', action: 'Removed deprecated metric', user: 'sriramm2' },
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Metric Removal', action: 'Removed deprecated metric', user: 'sriramm2' },
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Metric Removal', action: 'Removed deprecated metric', user: 'sriramm' },
+            { date: '2026-09-11 at 09:01 PM PST', func: 'Metric Removal', action: 'Removed deprecated metric', user: 'sriramm' },
+        ];
+
+        function renderChangelog() {
+            const tbody = document.getElementById('changelogBody');
+            tbody.innerHTML = changelogData.map(function(row) {
+                return '<tr><td>' + row.date + '</td><td>' + row.func + '</td><td>' + row.action + '</td><td>' + row.user + '</td></tr>';
+            }).join('');
+        }
+        renderChangelog();
+
+        // Initial draw + live updates
+        updateMetrics();
+        setInterval(updateMetrics, 1000);
+    </script>
+</body>
+</html>
